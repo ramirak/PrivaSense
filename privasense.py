@@ -1,6 +1,7 @@
 
 import tkinter as tk
 from tkinter import LEFT, messagebox, filedialog, ttk, Frame
+from data.backup import init_backup_routine
 from data.data_eraser import DOD_5220_22_m, erase, erase_folder
 from data.free_space_eraser import erase_free_space
 from threading import Thread
@@ -83,7 +84,7 @@ def create_buttons(root):
     buttons = [tk.Button(frames[0],text="Shred a file", **button_args, command = lambda : browseFiles(erase, [DOD_5220_22_m])),
                 tk.Button(frames[0],text="Shred entire directory", **button_args, command = lambda: browseFolders(erase_folder, [DOD_5220_22_m])),
                 tk.Button(frames[0],text="Erase free space", **button_args, command = lambda: ask_user("PrivaSense","Erase free space on disk?\nThis process may take some time.", erase_fs_init)),
-                tk.Button(frames[0],text="Backup personal files", **button_args),
+                tk.Button(frames[0],text="Backup personal files", **button_args, command = lambda: browseFolders(init_backup_routine, [None])),
                 tk.Button(frames[1],text="Encrypt a directory", **button_args, command = lambda: browseFolders(encrypt_folder, [None])),
                 tk.Button(frames[1],text="Decrypt a directory", **button_args, command = lambda: browseFolders(decrypt_folder, [None])),
                 tk.Button(frames[1],text="Encrypt a file", **button_args, command = lambda: browseFiles(encrypt_file, [None])),
