@@ -9,10 +9,11 @@ from encryption.encryption_manager import *
 from os_priv.cleanup import init_cleanup_routine
 import os
 
-main_color = "#212121"
-secondary_color = "#388E3C"
-hover_color = "#388000"
-font_color = "#fff"
+main_color = "#0A192F"
+secondary_color = "#172A46"
+hover_color = "#7A86A6"
+font_color = "#64F9DA"
+font_secondary_color = "#C6D0F0"
 font_family = "Segoe UI Semilight"
 
 def erase_fs_init():
@@ -51,12 +52,14 @@ def browseFiles(func , args):
         messagebox.showinfo("information", "Error")
     
 
-def browseFolders(func , args):
+def browseFolders(func , msg ,args):
     directory = filedialog.askdirectory()
     if len(directory) <= 1:
         return
-    func(directory, *args)
-    messagebox.showinfo("information", "Operation completed")
+    res = messagebox.askquestion("Warning", msg)
+    if res == "yes":
+        func(directory, *args)
+        messagebox.showinfo("information", "Operation completed")
 
 
 def create_main_window():
@@ -76,17 +79,20 @@ def create_buttons(root):
     for i in range(4):
         frames.append(Frame(root, bg=main_color
     ))
-        tk.Label(text=headers[i], bg=main_color, fg=font_color, font=("Serif", 10, "bold")).pack(pady=10)
+        header = tk.Label(text=headers[i], bg=main_color, fg=font_secondary_color, font=("Serif", 10, "bold"))
+        header.pack(pady=10)
+        header.bind('<Enter>', lambda e: e.widget.config(fg=hover_color))
+        header.bind('<Leave>', lambda e: e.widget.config(fg=font_secondary_color))
         frames[i].pack()
 
-    button_args = {"height":5, "width":22, "border":0, "bg":secondary_color, "fg":font_color, "font":("Serif", 10, "bold")}
+    button_args = {"height":5, "width":22, "border":0, "bg":secondary_color, "fg":font_color, "font":("Serif", 10) }
 
     buttons = [tk.Button(frames[0],text="Shred a file", **button_args, command = lambda : browseFiles(erase, [DOD_5220_22_m])),
-                tk.Button(frames[0],text="Shred entire directory", **button_args, command = lambda: browseFolders(erase_folder, [DOD_5220_22_m])),
+                tk.Button(frames[0],text="Shred entire directory", **button_args, command = lambda: browseFolders(erase_folder, "This will operation is permanent and will erase all files in the chosen directory.\nAre you sure you want to ontinue?" ,[DOD_5220_22_m])),
                 tk.Button(frames[0],text="Erase free space", **button_args, command = lambda: ask_user("PrivaSense","Erase free space on disk?\nThis process may take some time.", erase_fs_init)),
-                tk.Button(frames[0],text="Backup personal files", **button_args, command = lambda: browseFolders(init_backup_routine, [None])),
-                tk.Button(frames[1],text="Encrypt a directory", **button_args, command = lambda: browseFolders(encrypt_folder, [None])),
-                tk.Button(frames[1],text="Decrypt a directory", **button_args, command = lambda: browseFolders(decrypt_folder, [None])),
+                tk.Button(frames[0],text="Backup personal files", **button_args, command = lambda: browseFolders(init_backup_routine, "This will backup all personal files to the chosen directory.\nContinue?", [None])),
+                tk.Button(frames[1],text="Encrypt a directory", **button_args, command = lambda: browseFolders(encrypt_folder, "All files in the chosen directory will be encrypted.\nPlease make sure to backup your personal key.\nContinue?", [None])),
+                tk.Button(frames[1],text="Decrypt a directory", **button_args, command = lambda: browseFolders(decrypt_folder,"Decrypt all files in the chosen directory?",[None])),
                 tk.Button(frames[1],text="Encrypt a file", **button_args, command = lambda: browseFiles(encrypt_file, [None])),
                 tk.Button(frames[1],text="Decrypt a file", **button_args, command = lambda: browseFiles(decrypt_file, [None])),
                 tk.Button(frames[2], text="Privacy cleanup", **button_args, command = lambda: ask_user("privasense","Start cleanup routine?", init_cleanup_routine)),
@@ -100,9 +106,9 @@ def create_buttons(root):
 
 
 root = create_main_window()
-header = tk.Label(text="PrivaSense", bg=main_color, fg=font_color, font=(font_family, 18, "bold", "italic"))
+header = tk.Label(text="PrivaSense", bg=main_color, fg=font_secondary_color, font=(font_family, 18, "bold", "italic"))
 header.bind('<Enter>', lambda e: e.widget.config(fg=hover_color))
-header.bind('<Leave>', lambda e: e.widget.config(fg=font_color))
+header.bind('<Leave>', lambda e: e.widget.config(fg=font_secondary_color))
 header.pack(pady=10)
 create_buttons(root)
 root.mainloop()
