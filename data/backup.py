@@ -12,8 +12,7 @@ def init_backup_routine(destination, reserved):
         for filename in glob.iglob(os.environ["systemdrive"] + "/**", recursive=True):
             if os.path.isfile(filename):
                 if Path(filename).suffix.lower() in backup_file_types:
-                    shutil.copy(filename, destination)
-            else:
-                os.mkdir(destination)
-    except:
+                    shutil.copy(filename, destination + "/")
+    except Exception as e:
+        print(e)
         return

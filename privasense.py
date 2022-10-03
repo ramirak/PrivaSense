@@ -6,8 +6,12 @@ from data.data_eraser import DOD_5220_22_m, erase, erase_folder
 from data.free_space_eraser import erase_free_space
 from threading import Thread
 from encryption.encryption_manager import *
+from os_priv.blacklist import replace_host_file, reset_hosts_file
 from os_priv.cleanup import init_cleanup_routine
 import os
+from ctypes import windll
+
+windll.shcore.SetProcessDpiAwareness(1)
 
 main_color = "#0A192F"
 secondary_color = "#172A46"
@@ -24,10 +28,13 @@ def erase_fs_init():
     thread.start()
     
 
-def ask_user(title, msg, action):
+def ask_user(title, msg, action, params):
    res = messagebox.askquestion(title, msg)
    if res == "yes":
-        action()
+        if params != None:
+            action(*params)
+        else: 
+            action()
 
 
 def browseFiles(func , args):
@@ -66,7 +73,7 @@ def create_main_window():
     window = tk.Tk()
     window.configure(bg=main_color
 )
-    window.minsize(width=950, height=640)
+    window.minsize(width=1100, height=750)
     window.title("PrivaSense")
     window.iconbitmap("imgs/icon.ico")
     return window
@@ -89,16 +96,18 @@ def create_buttons(root):
 
     buttons = [tk.Button(frames[0],text="Shred a file", **button_args, command = lambda : browseFiles(erase, [DOD_5220_22_m])),
                 tk.Button(frames[0],text="Shred entire directory", **button_args, command = lambda: browseFolders(erase_folder, "This will operation is permanent and will erase all files in the chosen directory.\nAre you sure you want to ontinue?" ,[DOD_5220_22_m])),
-                tk.Button(frames[0],text="Erase free space", **button_args, command = lambda: ask_user("PrivaSense","Erase free space on disk?\nThis process may take some time.", erase_fs_init)),
+                tk.Button(frames[0],text="Erase free space", **button_args, command = lambda: ask_user("PrivaSense","Erase free space on disk?\nThis process may take some time.", erase_fs_init, None)),
                 tk.Button(frames[0],text="Backup personal files", **button_args, command = lambda: browseFolders(init_backup_routine, "This will backup all personal files to the chosen directory.\nContinue?", [None])),
                 tk.Button(frames[1],text="Encrypt a directory", **button_args, command = lambda: browseFolders(encrypt_folder, "All files in the chosen directory will be encrypted.\nPlease make sure to backup your personal key.\nContinue?", [None])),
                 tk.Button(frames[1],text="Decrypt a directory", **button_args, command = lambda: browseFolders(decrypt_folder,"Decrypt all files in the chosen directory?",[None])),
                 tk.Button(frames[1],text="Encrypt a file", **button_args, command = lambda: browseFiles(encrypt_file, [None])),
                 tk.Button(frames[1],text="Decrypt a file", **button_args, command = lambda: browseFiles(decrypt_file, [None])),
-                tk.Button(frames[2], text="Privacy cleanup", **button_args, command = lambda: ask_user("privasense","Start cleanup routine?", init_cleanup_routine)),
-                tk.Button(frames[2],text="Block ip list", **button_args),
-                tk.Button(frames[3],text="Exit", **button_args, command = lambda: ask_user("privasense","Are you sure you want to exit?", exit)),
-                tk.Button(frames[3],text="Settings", **button_args, command= lambda: os.startfile("privasense.conf"))]
+                tk.Button(frames[2], text="Privacy cleanup", **button_args, command = lambda: ask_user("privasense","Start cleanup routine?", init_cleanup_routine, None)),
+                tk.Button(frames[2],text="Block IP list", **button_args, command = lambda: ask_user("privasense","This action will make changes to your hosts file.\nAre you sure you want to continue?", replace_host_file, ["adaway", True])),
+                tk.Button(frames[2],text="Block windows spyware", **button_args, command = lambda: messagebox.showinfo("information", "To be implemented in the future")),
+                tk.Button(frames[3],text="Exit", **button_args, command = lambda: ask_user("privasense","Are you sure you want to exit?", exit, None)),
+                tk.Button(frames[3],text="Settings", **button_args, command= lambda: os.startfile("privasense.conf")),
+                tk.Button(frames[3],text="Reset changes", **button_args,  command = lambda: ask_user("privasense","This will reset changes made to your system.\nContinue?", reset_hosts_file, None))]
     for b in buttons:
         b.bind('<Enter>', lambda e: e.widget.config(bg=hover_color))
         b.bind('<Leave>', lambda e: e.widget.config(bg=secondary_color))
