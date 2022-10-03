@@ -16,5 +16,5 @@
 
 ## Screenshot
 <p align="center">
-<img src="imgs/screenshot-1.png" width="900">
+<img src="imgs/screenshot-1.png" width="700">
 </p>
