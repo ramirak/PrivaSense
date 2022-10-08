@@ -1,6 +1,6 @@
 import os, glob, random
+import data.enums as enums
 
-DOD_5220_22_m, NCSC_TG_025, HMG_IS5, ISM_6_2_92, RCMP_TSSIT_OPS_II, *_ = range(10) 
 
 def erase_folder(folder_path, mode):
     try:
@@ -17,43 +17,36 @@ def erase(file_path, mode):
     ## Get the positin of the last byte in the file 
     with open(file_path, 'ab') as f:
         length = f.tell()
-
-    if mode == DOD_5220_22_m:
+    if mode == enums.erase_algorithms.DOD_5220_22_m.name:
         overwrite(file_path, length, zeros)
         overwrite(file_path, length, ones)
         overwrite(file_path, length, None)
-    elif mode == NCSC_TG_025:
-        n_overwrites = assert_choice(input("How many overwrites?"))
-        if n_overwrites == -1:
-            print("Invalid input")
-            return -1
-        for i in range(n_overwrites):
-            overwrite(file_path, length, zeros)
-            overwrite(file_path, length, ones)
-            overwrite(file_path, length, None)
-    elif mode == RCMP_TSSIT_OPS_II:
+    elif mode == enums.erase_algorithms.RCMP_TSSIT_OPS_II.name:
         for i in range(3):
             overwrite(file_path, length, zeros)
             overwrite(file_path, length, ones)
         overwrite(file_path, length, None)
-    elif mode == HMG_IS5:
+    elif mode == enums.erase_algorithms.HMG_IS5.name:
         overwrite(file_path, length, zeros)
         overwrite(file_path, length, None)
-    elif mode == ISM_6_2_92:
+    elif mode == enums.erase_algorithms.ISM_6_2_92.name:
         overwrite(file_path, length, None)
-
+    else:
+        return enums.results.ERR_UNKNOWN.value
     remove(file_path)
-    return
+    return enums.results.SUCCESS.value
 
 
 def overwrite(file_path, bytes_len, value):
-    with open(file_path, 'wb') as f:
-        if value != None:
-            for b in range(bytes_len):
-                f.write(value)
-        else:
-            f.write(os.urandom(bytes_len))
-
+    try:
+        with open(file_path, 'wb') as f:
+            if value != None:
+                for b in range(bytes_len):
+                    f.write(value)
+            else:
+                f.write(os.urandom(bytes_len))
+    except:
+        return 
 
 def remove(file_path):
     ## Generate a new random name before removing
