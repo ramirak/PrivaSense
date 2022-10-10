@@ -1,29 +1,18 @@
 import glob, os
 import shutil
 from pathlib import Path
-import os, stat
+import os, uuid
 from encryption.encryption_manager import encrypt_folder
+import data.enums as enums
 
-backup_file_types = [".doc",".docx", ".odt", ".pdf", ".xls", 
-                    ".xlsx", ".ods", ".ppt", ".pptx", ".txt", 
-                    ".jpg", ".jpeg", ".gif", ".png", ".mp3", ".mp4"]
 
-exclude = ["AppData"]
-
-def init_backup_routine(destination, reserved):
-    exclude.append(destination)
+def init_backup_routine(sources ,destination, reserved):
     try:
-        for filename in glob.iglob(os.environ["userprofile"] + "/**", recursive=True):
-            if os.path.isfile(filename):
-                if Path(filename).suffix.lower() in backup_file_types and not is_path_excluded(filename):
-                    shutil.copy(filename, destination + "/")
-                    encrypt_folder(destination, None)
+        new_folder_name = uuid.uuid4().hex
+        for source in sources:
+            shutil.copytree(source, destination + "/" + new_folder_name)
+            encrypt_folder(destination, None)
+        return enums.results.SUCCESS.value
     except Exception as e:
-        return
-
-
-def is_path_excluded(filepath):
-    for i in exclude:
-        if i in filepath:
-            return True
-    return False
+        return enums.results.ERR_UNKNOWN.value
+       

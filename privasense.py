@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import BOTTOM, LEFT, messagebox, filedialog, ttk, Frame
 from data.backup import init_backup_routine
@@ -6,11 +5,12 @@ from data.data_eraser import erase, erase_folder
 from data.free_space_eraser import erase_free_space
 from threading import Thread
 from encryption.encryption_manager import *
-from os_priv.blacklist import replace_host_file, reset_hosts_file
+from os_priv.blacklist import change_dns, replace_host_file, reset_hosts_file
 from os_priv.cleanup import init_cleanup_routine
 import os
 from ctypes import windll
-from data.enums import results, enc_algorithms, erase_algorithms
+from data.enums import dns, filtering, results, enc_algorithms, erase_algorithms
+from os_priv.os_utils import is_admin, run_as_admin
 
 windll.shcore.SetProcessDpiAwareness(1)
 
@@ -20,6 +20,55 @@ hover_color = "#7A86A6"
 font_color = "#64F9DA"
 font_secondary_color = "#C6D0F0"
 font_family = "Segoe UI Semilight"
+
+
+def thread_worker(func, args):
+    res = None
+    if len(args) > 0:
+        res = func(*args)
+    else:
+        res = func()
+    assert_res(res)
+
+
+def erase_fs_init():
+   # pb = ttk.Progressbar(window, orient='horizontal',mode='indeterminate',length=280)
+   # pb.start()
+   # pb.pack()
+    thread = Thread(target = erase_free_space, daemon=True)
+    thread.start()
+
+
+def browseFiles(func , args):
+    filename = filedialog.askopenfilename(initialdir = "/", title = "Select a File")
+    args.insert(0, filename)
+    if len(filename) <= 1:
+        return
+    res = messagebox.askquestion("Warning", "Are you sure you want to proceed?\nThis cannot be undone.")
+    if res == "yes":
+        thread = Thread(target = thread_worker, args=(func, args,), daemon=True)
+        thread.start()
+
+
+def browseFolders(func ,args):
+    directory = filedialog.askdirectory()
+    args.insert(0, directory)
+
+    if len(directory) <= 1:
+        return
+    res = messagebox.askquestion("Warning", "Are you sure you want to proceed?\nThis cannot be undone.")
+    if res == "yes":
+        thread = Thread(target = thread_worker, args=(func, args,), daemon=True)
+        thread.start()
+
+
+def ask_user(title, msg, action, params):
+    res = messagebox.askquestion(title, msg)
+    if res == "yes":
+            if params != None:
+                assert_res(action(*params))
+            else: 
+                assert_res(action())            
 
 
 def center(win):
@@ -36,82 +85,39 @@ def center(win):
     win.deiconify()
 
 
-def erase_fs_init():
-   # pb = ttk.Progressbar(window, orient='horizontal',mode='indeterminate',length=280)
-   # pb.start()
-   # pb.pack()
-    thread = Thread(target = erase_free_space, daemon=True)
-    thread.start()
-    
-
-def ask_user(title, msg, action, params):
-   res = messagebox.askquestion(title, msg)
-   if res == "yes":
-        if params != None:
-            action(*params)
-        else: 
-            action()
-
-
 def show_dropdown(msg, opt_list, func, func_args):
     window = tk.Toplevel()
     window.minsize(width=400, height=150)
+    window.iconbitmap("imgs/icon.ico")
     center(window)
     header = tk.Label(window, text=msg, font=("Serif", 11))
     header.pack(pady=10)
     args = {"height":1, "width":20, "border":0, "font":("Serif", 10) }
     cb = ttk.Combobox(window, width = 27, justify="center", state= "readonly")
+    cb.option_add('*TCombobox*Listbox.Justify', 'center')
     cb['values'] = opt_list
     cb.current(0)
     cb.pack()
 
-    def do():
+    def do(func):
         # first arg in 'func_args' is a function, second is function's args.
         # E.g. 
         # func = browse file / folder .. 
         # func_args[0] = encrypt / erase .. 
         # func_args[1] = enc_args / erase_args 
-
-        func_args[1].append(cb.get()) 
-        func(*func_args)
+        
+        func_args[1].append(cb.get())
+        # If func is None, call func_args[0] 
+        if func == None:
+            func = func_args.pop(0)
+            thread = Thread(target = thread_worker, args=(func, func_args[0],), daemon=True)
+            thread.start()
+        else:
+            func(*func_args)
         window.destroy()
 
-
-    tk.Button( window, text="Browse" ,**args, command= lambda: do()).pack(pady=15, side=BOTTOM)
-
-
-def browseFiles(func , args):
-    filename = filedialog.askopenfilename(initialdir = "/",
-    title = "Select a File")
-    if len(filename) <= 1:
-        return
-    res = messagebox.askquestion("Warning", "Are you sure you want to proceed?\nThis cannot be undone.")
-    if res == "yes":
-        res = func(filename, *args)
-        if res == results.SUCCESS.value:
-            messagebox.showinfo("information", "Operation completed successfully")
-        elif res == results.ERR_ALREADY_ENCRYPTED.value:
-            messagebox.showinfo("information", "File is already encrypted, aborting")
-        elif res == results.ERR_DIFFERENT_METHOD.value:
-            messagebox.showinfo("information", "File is encrypted with different algorithm, aborting")
-        elif res == results.ERR_INVALID_KEY.value:
-            messagebox.showinfo("information", "Invalid key")
-        elif res == results.ERR_NOT_ENCRYPTED.value:
-            messagebox.showinfo("information", "File is not encrypted, aborting")
-        elif res == results.ERR_UNKNOWN.value:
-            messagebox.showinfo("information", "Operation failed")
-        else:
-            messagebox.showinfo("information", "Error")
-        
-
-def browseFolders(func ,args):
-    directory = filedialog.askdirectory()
-    if len(directory) <= 1:
-        return
-    res = messagebox.askquestion("Warning", "Are you sure you want to proceed?\nThis cannot be undone.")
-    if res == "yes":
-        func(directory, *args)
-        messagebox.showinfo("information", "Operation completed")
+    tk.Button( window, text="Cancel" ,**args, command= lambda: window.destroy()).pack(pady=8, side=BOTTOM)
+    tk.Button( window, text="Choose" ,**args, command= lambda: do(func)).pack(pady=2,side=BOTTOM)
 
 
 def create_main_window():
@@ -163,22 +169,26 @@ def create_buttons(root):
                             command = lambda: show_dropdown("Please choose decryption algorithm", [i.name for i in enc_algorithms] ,browseFiles, [decrypt_file, []])),
 
                 tk.Button(frames[2], text="Privacy cleanup", **button_args, 
-                            command = lambda: ask_user("privasense","Start cleanup routine?", init_cleanup_routine, None)),
+                            command = lambda: [run_as_admin(), ask_user("privasense","Start cleanup routine?", init_cleanup_routine, None)]),
 
                 tk.Button(frames[2],text="Block IP list", **button_args, 
-                            command = lambda: ask_user("privasense","This action will make changes to your hosts file.\nAre you sure you want to continue?", replace_host_file, ["adaway", True])),
+                            command = lambda: [run_as_admin(), show_dropdown("Please choose filtering option", [i.name for i in filtering] , None, [replace_host_file, [True]])]),
 
                 tk.Button(frames[2],text="Block windows spyware", **button_args, 
                             command = lambda: messagebox.showinfo("information", "To be implemented in the future")),
+                
+                tk.Button(frames[2],text="Change DNS", **button_args,  
+                            command = lambda: [run_as_admin(), show_dropdown("Please choose DNS provider", [i.name for i in dns] , None, [change_dns, []])]),
 
                 tk.Button(frames[3],text="Exit", **button_args, 
                             command = lambda: ask_user("privasense","Are you sure you want to exit?", exit, None)),
 
-                tk.Button(frames[3],text="Settings", **button_args, 
-                            command = lambda: os.startfile("privasense.conf")),
+                tk.Button(frames[3],text="About", **button_args, 
+                            command = lambda: messagebox.showinfo("About", "PrivaSense v1.0.0\nSource Code - github.com/ramirak\nAll rights reserved - RamiRak\n\n\nDISCLAIMER - \nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")),
 
                 tk.Button(frames[3],text="Reset changes", **button_args,  
-                            command = lambda: ask_user("privasense","This will reset changes made to your system.\nContinue?", reset_hosts_file, None))]
+                            command = lambda: [run_as_admin(), ask_user("privasense","This will reset changes made to your system.\nContinue?", reset_hosts_file, None)])]
+
 
     for b in buttons:
         b.bind('<Enter>', lambda e: e.widget.config(bg=hover_color))
@@ -186,13 +196,39 @@ def create_buttons(root):
         b.pack(padx=3, pady=3,side=LEFT)
 
 
-root = create_main_window()
-center(root)
-header = tk.Label(text="PrivaSense", bg=main_color, fg=font_secondary_color, font=(font_family, 18, "bold", "italic"))
-header.bind('<Enter>', lambda e: e.widget.config(fg=hover_color))
-header.bind('<Leave>', lambda e: e.widget.config(fg=font_secondary_color))
-header.pack(pady=10)
-create_buttons(root)
+def assert_res(res):    
+    if res == results.SUCCESS.value:
+        messagebox.showinfo("information", "Operation completed successfully")
+    elif res == results.PARTLY_SUCCESS.value:
+        messagebox.showinfo("information", "Operation completed with errors. See log file.")
+    elif res == results.MULTIPLE_ERRORS.value:
+        messagebox.showinfo("information", "Operation failed with multiple errors. See log file.")
+    elif res == results.ERR_ALREADY_ENCRYPTED.value:
+        messagebox.showinfo("information", "File is already encrypted, aborting")
+    elif res == results.ERR_DIFFERENT_METHOD.value:
+        messagebox.showinfo("information", "File is encrypted with different algorithm, aborting")
+    elif res == results.ERR_INVALID_KEY.value:
+        messagebox.showinfo("information", "Invalid key")
+    elif res == results.ERR_NOT_ENCRYPTED.value:
+        messagebox.showinfo("information", "File is not encrypted, aborting")
+    elif res == results.ERR_UNKNOWN.value:
+        messagebox.showinfo("information", "Operation failed")
+    elif res == results.ALREADY_RUNNING.value:
+        messagebox.showinfo("information", "Operation already running")
+    else:
+        messagebox.showinfo("information", "Error")
+      
 
-root.mainloop()
+def init():
+    root = create_main_window()
+    center(root)
+    header = tk.Label(text="PrivaSense", bg=main_color, fg=font_secondary_color, font=(font_family, 18, "bold", "italic"))
+    header.bind('<Enter>', lambda e: e.widget.config(fg=hover_color))
+    header.bind('<Leave>', lambda e: e.widget.config(fg=font_secondary_color))
+    header.pack(pady=10)
+    create_buttons(root)
+    root.mainloop()
+
+
+init()
 
