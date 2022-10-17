@@ -8,12 +8,13 @@ def erase_folder(folder_path, mode):
     if critical_function_lock.locked():
         return enums.results.ALREADY_RUNNING.value
     try:
-        with critical_function_lock:
-            for filename in glob.iglob(folder_path + "/**", recursive=True):
-                if os.path.isfile(filename):
-                    erase(filename, mode)
+        for filename in glob.iglob(folder_path + "/**", recursive=True):
+            if os.path.isfile(filename):
+                running = enums.results.ALREADY_RUNNING.value
+                if erase(filename, mode) == running:
+                    return running
     except:
-        return
+        return enums.results.ERR_UNKNOWN.value
 
 def erase(file_path, mode):
     if critical_function_lock.locked():
@@ -57,11 +58,14 @@ def overwrite(file_path, bytes_len, value):
         return 
 
 def remove(file_path):
-    ## Generate a new random name before removing
-    new_file_name = str(random.getrandbits(32))
-    os.rename(file_path, new_file_name)
-    os.remove(new_file_name)
-
+    try:
+        ## Generate a new random name before removing
+        new_file_name = str(random.getrandbits(32))
+        os.rename(file_path, new_file_name)
+        os.remove(new_file_name)
+        print("File %s was erased successfully." % (file_path))
+    except Exception as e:
+        print(e)
 
 def assert_choice(choice):
     try:

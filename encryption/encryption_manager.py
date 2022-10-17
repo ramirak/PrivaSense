@@ -1,6 +1,6 @@
 import base64, glob, os
 from .aes import *
-from encryption.key_generator import generate_key, retrieve_key
+from encryption.generator import generate_key, retrieve_key
 import data.enums as enums
 import data.data_eraser as data_eraser
 from threading import Lock

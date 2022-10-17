@@ -34,17 +34,21 @@ def change_dns(dns_provider):
     provider_ip = []
 
     if dns_provider == enums.dns.CLOUDFLARE.name:
-        provider_ip.append("1.1.1.1")
-        provider_ip.append("1.0.0.1")
+        provider_ip.append(enums.dns.CLOUDFLARE.value[0])
+        provider_ip.append(enums.dns.CLOUDFLARE.value[1])
+
     elif dns_provider == enums.dns.DNS_WATCH.name:
-        provider_ip.append("84.200.69.80")
-        provider_ip.append("84.200.70.40")
+        provider_ip.append(enums.dns.DNS_WATCH.value[0])
+        provider_ip.append(enums.dns.DNS_WATCH.value[1])
+    
     elif dns_provider == enums.dns.OPEN_DNS.name:
-        provider_ip.append("208.67.222.123")
-        provider_ip.append("208.67.220.123")
+        provider_ip.append(enums.dns.OPEN_DNS.value[0])
+        provider_ip.append(enums.dns.OPEN_DNS.value[1])
+    
     elif dns_provider == enums.dns.QUAD9.name:
-        provider_ip.append("9.9.9.9")
-        provider_ip.append("149.112.112.112")
+        provider_ip.append(enums.dns.QUAD9.value[0])
+        provider_ip.append(enums.dns.QUAD9.value[1])
+    
     elif dns_provider == enums.dns.DEFAULT_DHCP.name:
         for i in addrs:
             cmd = "netsh interface ipv4 set dnsservers \"%s\" dhcp" % (i) 
